@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Presence | 99 Things</title>
+    <style>
+        :root {
+            --bg: #F8F9FA; --card: #FFFFFF; --text-main: #1A1A1A; --text-dim: #909090;      
+            --accent: #6366F1; --accent-soft: rgba(99, 102, 241, 0.08); 
+            --border: #EEEEEE; --shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+            --radius: 16px; --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+        body { background: var(--bg); color: var(--text-main); display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-bottom: 80px; }
+        header { width: 100%; max-width: 500px; padding: 60px 24px 30px; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        h1 { font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+        .count-display { font-size: 0.75rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 4px 12px; border-radius: 100px; }
+        h2 { font-weight: 400; font-size: 2.2rem; letter-spacing: -1px; margin-bottom: 20px; }
+        .progress-track { height: 4px; background: var(--border); border-radius: 2px; width: 100%; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.8s var(--transition); }
+
+        .action-bar { width: 100%; max-width: 500px; padding: 0 24px 20px; display: flex; gap: 8px; }
+        .action-btn { background: transparent; border: 1px solid var(--border); color: var(--text-dim); padding: 8px 12px; border-radius: 8px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: var(--transition); }
+        .action-btn:hover { background: var(--card); border-color: var(--text-main); color: var(--text-main); }
+
+        .input-card { width: calc(100% - 48px); max-width: 452px; background: var(--card); padding: 14px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 32px; border: 1px solid var(--border); }
+        .input-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+        .custom-select { position: relative; flex-shrink: 0; width: 105px; }
+        .selected { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: var(--accent); padding: 10px; background: var(--accent-soft); border-radius: 10px; cursor: pointer; text-align: center; }
+        .options { position: absolute; top: calc(100% + 8px); left: 0; width: 150px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: none; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .custom-select.open .options { display: block; }
+        .options div { padding: 12px; font-size: 0.8rem; cursor: pointer; }
+        .options div:hover { background: var(--accent-soft); color: var(--accent); }
+        .item-input { flex: 1; min-width: 0; border: none; background: transparent; font-size: 1rem; font-weight: 500; outline: none; }
+        .add-btn { flex-shrink: 0; background: var(--text-main); color: white; border: none; width: 40px; height: 40px; border-radius: 12px; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        .filters { width: 100%; max-width: 500px; padding: 0 24px 24px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+        .filter-btn { background: var(--card); border: 1px solid var(--border); padding: 8px 16px; border-radius: 100px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; cursor: pointer; color: var(--text-dim); }
+        .filter-btn.active { background: var(--text-main); color: white; border-color: var(--text-main); }
+
+        .list-section { width: 100%; max-width: 500px; padding: 0 24px; }
+        .item-row { display: flex; align-items: center; background: var(--card); padding: 16px; border-radius: var(--radius); margin-bottom: 12px; border: 1px solid var(--border); touch-action: none; cursor: grab; }
+        .item-row.dragging { opacity: 0.5; background: var(--accent-soft); border: 1px dashed var(--accent); transform: scale(1.02); }
+        .drag-handle { width: 24px; color: #ddd; margin-right: 8px; display: flex; font-size: 1.2rem; justify-content: center; }
+        .drag-handle.hidden { visibility: hidden; pointer-events: none; }
+        .item-num { font-size: 0.7rem; font-weight: 800; color: #E0E0E0; margin-right: 16px; }
+        .item-content { flex: 1; pointer-events: none; }
+        .item-cat { font-size: 0.6rem; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; }
+        .item-name { font-weight: 500; font-size: 0.95rem; }
+        .delete-btn { background: none; border: none; color: #F0F0F0; cursor: pointer; font-size: 1.1rem; padding: 8px; }
+
+        @media print { .input-card, .filters, .action-bar, .delete-btn, .add-btn, .drag-handle { display: none !important; } }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-top">
+        <h1>Presence</h1>
+        <div class="count-display"><span id="countNum">0</span> / 99</div>
+    </div>
+    <h2>99 Things</h2>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+</header>
+
+<div class="action-bar">
+    <button class="action-btn" onclick="window.print()">Print</button>
+    <button class="action-btn" onclick="exportData()">Export</button>
+    <button class="action-btn" onclick="document.getElementById('fileInput').click()">Import</button>
+    <input type="file" id="fileInput" accept=".json" style="display:none">
+</div>
+
+<div class="input-card">
+    <div class="input-row">
+        <div class="custom-select" id="catSelect">
+            <div class="selected" id="currentSelectedCat">Clothing</div>
+            <div class="options" id="catOptions">
+                <div data-value="clothing">Clothing</div>
+                <div data-value="accessories">Accessories</div>
+                <div data-value="shoes">Shoes</div>
+                <div data-value="books">Books</div>
+                <div data-value="documents">Documents</div>
+                <div data-value="technology">Technology</div>
+                <div data-value="household">Household</div>
+                <div data-value="personal">Personal</div>
+                <div data-value="art">Art</div>
+                <div data-value="other">Other</div>
+            </div>
+        </div>
+        <input id="itemInput" class="item-input" placeholder="New item..." autocomplete="off">
+        <button id="addBtn" class="add-btn">+</button>
+    </div>
+</div>
+
+<div class="filters" id="filters">
+    <button class="filter-btn active" data-cat="all">All</button>
+    <button class="filter-btn" data-cat="clothing">Clothing</button>
+    <button class="filter-btn" data-cat="accessories">Accessories</button>
+    <button class="filter-btn" data-cat="shoes">Shoes</button>
+    <button class="filter-btn" data-cat="books">Books</button>
+    <button class="filter-btn" data-cat="documents">Documents</button>
+    <button class="filter-btn" data-cat="technology">Tech</button>
+    <button class="filter-btn" data-cat="household">Home</button>
+    <button class="filter-btn" data-cat="personal">Personal</button>
+    <button class="filter-btn" data-cat="art">Art</button>
+    <button class="filter-btn" data-cat="other">Other</button>
+</div>
+
+<div class="list-section" id="listSection"></div>
+
+<script>
+    const STORAGE_KEY = 'presence_unified_v5';
+    let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let currentMode = 'all'; // The unified category/filter state
+
+    const listSection = document.getElementById('listSection');
+    const itemInput = document.getElementById('itemInput');
+    const selectedLabel = document.getElementById('currentSelectedCat');
+
+    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+
+    function updateSync(newCat) {
+        currentMode = newCat;
+        
+        // 1. Update Filter UI
+        document.querySelectorAll('.filter-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.cat === currentMode);
+        });
+
+        // 2. Update Dropdown Label (don't show "All" in the input dropdown, default to Clothing if all)
+        selectedLabel.textContent = currentMode === 'all' ? 'Clothing' : currentMode;
+        
+        render();
+    }
+
+    function render() {
+        let filtered = currentMode === 'all' ? items : items.filter(i => i.cat === currentMode);
+        listSection.innerHTML = '';
+
+        filtered.forEach((item) => {
+            const row = document.createElement('div');
+            row.className = 'item-row';
+            row.dataset.id = item.id;
+            const isAll = currentMode === 'all';
+
+            if (isAll) {
+                row.onpointerdown = (e) => {
+                    this.dragItem = row; row.classList.add('dragging'); row.setPointerCapture(e.pointerId);
+                };
+                row.onpointermove = (e) => {
+                    if (!this.dragItem) return;
+                    const after = getDragAfterElement(listSection, e.clientY);
+                    if (!after) listSection.appendChild(this.dragItem);
+                    else listSection.insertBefore(this.dragItem, after);
+                };
+                row.onpointerup = (e) => {
+                    if (!this.dragItem) return;
+                    row.classList.remove('dragging'); row.releasePointerCapture(e.pointerId); this.dragItem = null;
+                    const rows = [...listSection.querySelectorAll('.item-row')];
+                    items = rows.map(r => items.find(i => i.id == r.dataset.id));
+                    save(); render();
+                };
+            }
+
+            row.innerHTML = `
+                <div class="drag-handle ${isAll ? '' : 'hidden'}">☰</div>
+                <span class="item-num">${String(items.indexOf(item) + 1).padStart(2, '0')}</span>
+                <div class="item-content">
+                    <span class="item-cat">${item.cat}</span>
+                    <span class="item-name">${item.name}</span>
+                </div>
+                <button class="delete-btn" onclick="deleteItem(${item.id})">✕</button>
+            `;
+            listSection.appendChild(row);
+        });
+
+        document.getElementById('countNum').textContent = items.length;
+        document.getElementById('progressFill').style.width = (items.length / 99 * 100) + '%';
+    }
+
+    function getDragAfterElement(container, y) {
+        const draggables = [...container.querySelectorAll('.item-row:not(.dragging)')];
+        return draggables.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
+            else return closest;
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    // Event Listeners
+    document.getElementById('filters').onclick = (e) => {
+        if (e.target.classList.contains('filter-btn')) updateSync(e.target.dataset.cat);
+    };
+
+    document.getElementById('catOptions').onclick = (e) => {
+        const val = e.target.dataset.value;
+        if (val) {
+            updateSync(val);
+            document.getElementById('catSelect').classList.remove('open');
+        }
+    };
+
+    document.getElementById('addBtn').onclick = () => {
+        const val = itemInput.value.trim();
+        if (!val || items.length >= 99) return;
+        // Use currentMode if it's not 'all', otherwise use the label's current text
+        const categoryToSave = currentMode === 'all' ? selectedLabel.textContent.toLowerCase() : currentMode;
+        items.push({ id: Date.now(), name: val, cat: categoryToSave });
+        save(); itemInput.value = ''; render();
+    };
+
+    function deleteItem(id) { items = items.filter(i => i.id !== id); save(); render(); }
+    function exportData() {
+        const blob = new Blob([JSON.stringify(items)], {type: 'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'presence_99.json'; a.click();
+    }
+    document.getElementById('fileInput').onchange = (e) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => { items = JSON.parse(ev.target.result).slice(0,99); save(); render(); };
+        reader.readAsText(e.target.files[0]);
+    };
+    selectedLabel.onclick = (e) => { e.stopPropagation(); document.getElementById('catSelect').classList.toggle('open'); };
+    document.addEventListener('click', () => document.getElementById('catSelect').classList.remove('open'));
+
+    render();
+</script>
+</body>
+</html>
