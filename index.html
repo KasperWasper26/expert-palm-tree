@@ -3,7 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Presence | 99 Things</title>
+    <title>99 Things | Inventory</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#F8F9FA">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="99 Things">
+    
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" href="icon-192.png">
     <style>
         :root {
             --bg: #F8F9FA; --card: #FFFFFF; --text-main: #1A1A1A; --text-dim: #909090;      
@@ -110,11 +120,10 @@
 </div>
 
 <div class="list-section" id="listSection"></div>
-
-<script>
+  <script>
     const STORAGE_KEY = 'presence_unified_v5';
     let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    let currentMode = 'all'; // The unified category/filter state
+    let currentMode = 'all';
 
     const listSection = document.getElementById('listSection');
     const itemInput = document.getElementById('itemInput');
@@ -124,15 +133,10 @@
 
     function updateSync(newCat) {
         currentMode = newCat;
-        
-        // 1. Update Filter UI
         document.querySelectorAll('.filter-btn').forEach(b => {
             b.classList.toggle('active', b.dataset.cat === currentMode);
         });
-
-        // 2. Update Dropdown Label (don't show "All" in the input dropdown, default to Clothing if all)
         selectedLabel.textContent = currentMode === 'all' ? 'Clothing' : currentMode;
-        
         render();
     }
 
@@ -191,7 +195,18 @@
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    // Event Listeners
+    function addItem() {
+        const val = itemInput.value.trim();
+        if (!val || items.length >= 99) return;
+        const categoryToSave = currentMode === 'all' ? selectedLabel.textContent.toLowerCase() : currentMode;
+        items.push({ id: Date.now(), name: val, cat: categoryToSave });
+        save(); itemInput.value = ''; render();
+    }
+
+    // Logic for "Enter" key support
+    itemInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addItem(); });
+    document.getElementById('addBtn').onclick = (e) => { e.preventDefault(); addItem(); };
+
     document.getElementById('filters').onclick = (e) => {
         if (e.target.classList.contains('filter-btn')) updateSync(e.target.dataset.cat);
     };
@@ -204,29 +219,32 @@
         }
     };
 
-    document.getElementById('addBtn').onclick = () => {
-        const val = itemInput.value.trim();
-        if (!val || items.length >= 99) return;
-        // Use currentMode if it's not 'all', otherwise use the label's current text
-        const categoryToSave = currentMode === 'all' ? selectedLabel.textContent.toLowerCase() : currentMode;
-        items.push({ id: Date.now(), name: val, cat: categoryToSave });
-        save(); itemInput.value = ''; render();
-    };
-
     function deleteItem(id) { items = items.filter(i => i.id !== id); save(); render(); }
+    
     function exportData() {
         const blob = new Blob([JSON.stringify(items)], {type: 'application/json'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'presence_99.json'; a.click();
+        const a = document.createElement('a'); 
+        a.href = URL.createObjectURL(blob); 
+        a.download = `99things_${new Date().toISOString().split('T')[0]}.json`; 
+        a.click();
     }
+
     document.getElementById('fileInput').onchange = (e) => {
         const reader = new FileReader();
-        reader.onload = (ev) => { items = JSON.parse(ev.target.result).slice(0,99); save(); render(); };
+        reader.onload = (ev) => { 
+            try {
+                items = JSON.parse(ev.target.result).slice(0,99); 
+                save(); render(); 
+            } catch(e) { alert("Import failed: Invalid file."); }
+        };
         reader.readAsText(e.target.files[0]);
     };
+
     selectedLabel.onclick = (e) => { e.stopPropagation(); document.getElementById('catSelect').classList.toggle('open'); };
     document.addEventListener('click', () => document.getElementById('catSelect').classList.remove('open'));
 
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     render();
-</script>
+  </script>
 </body>
 </html>
