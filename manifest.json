@@ -1,6 +1,6 @@
 {
   "short_name": "99 Things",
-  "name": "99 Things: Minimalist Inventory",
+  "name": "99 Things Inventory",
   "icons": [
     {
       "src": "icon-192.png",
@@ -13,7 +13,7 @@
       "sizes": "512x512"
     }
   ],
-  "start_url": "index.html",
+  "start_url": "./index.html",
   "background_color": "#F8F9FA",
   "display": "standalone",
   "scope": "./",
