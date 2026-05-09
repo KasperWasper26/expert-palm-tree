@@ -1,4 +1,4 @@
-const CACHE_NAME = '99things-v2';
+const CACHE_NAME = '99things-v3';
 const ASSETS = [
   './',
   './index.html',
