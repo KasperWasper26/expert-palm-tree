@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>99 Things | Inventory</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#F8F9FA">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #F8F9FA;
+            --text: #1A1A1A;
+            --accent: #6366F1;
+            --card: rgba(255, 255, 255, 0.9);
+            --radius: 20px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+        
+        body { 
+            background-color: var(--bg); 
+            background-size: cover; 
+            background-position: center; 
+            background-attachment: fixed;
+            color: var(--text); 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding-bottom: 40px;
+        }
+
+        header { 
+            width: 100%; 
+            max-width: 500px; 
+            padding: 40px 24px 20px; 
+            display: grid;
+            grid-template-areas: 
+                "top menu"
+                "title title"
+                "progress progress";
+            grid-template-columns: 1fr auto;
+            align-items: end;
+        }
+        
+        .header-top { 
+            grid-area: top;
+            display: flex; 
+            align-items: baseline; 
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+        
+        h1 { 
+            font-size: 0.65rem; 
+            letter-spacing: 2px; 
+            text-transform: uppercase; 
+            font-weight: 800; 
+            opacity: 0.5;
+            line-height: 1;
+        }
+        
+        .count-display { 
+            font-size: 0.7rem; 
+            font-weight: 800; 
+            color: var(--accent); 
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 2px 10px;
+            border-radius: 100px;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        h2 { 
+            grid-area: title;
+            font-weight: 400; 
+            font-size: 2.6rem; 
+            letter-spacing: -1.5px; 
+            margin-bottom: 15px; 
+        }
+
+        .menu-container { 
+            grid-area: menu;
+            position: relative;
+            align-self: start;
+            margin-top: -8px;
+        }
+        
+        .menu-dots { 
+            width: 44px; 
+            height: 44px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            font-size: 1.5rem; 
+            color: rgba(0,0,0,0.2); 
+        }
+        
+        .menu-dropdown { 
+            position: absolute; top: 40px; right: 0; background: white; border-radius: 15px; 
+            padding: 8px; display: none; flex-direction: column; width: 180px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.05);
+            z-index: 5000;
+        }
+        .menu-dropdown.open { display: flex; }
+        .menu-item { background: transparent; border: none; padding: 12px; text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; cursor: pointer; border-radius: 10px; width: 100%; color: var(--text); }
+
+        .progress-track { grid-area: progress; height: 4px; background: rgba(0,0,0,0.05); border-radius: 2px; width: 100%; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.8s ease; }
+
+        .content { width: 100%; max-width: 500px; padding: 0 24px; }
+
+        .input-card { background: var(--card); padding: 16px; border-radius: var(--radius); margin-bottom: 24px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); position: relative; z-index: 1000; }
+        .input-row { display: flex; align-items: center; gap: 12px; }
+        
+        .cat-selector-wrap { position: relative; }
+        .selected-cat-btn { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--accent); padding: 10px; background: rgba(99, 102, 241, 0.08); border-radius: 100px; cursor: pointer; min-width: 100px; text-align: center; }
+        
+        .cat-list-dropdown { 
+            position: absolute; top: 45px; left: 0; background: white; border-radius: 12px; 
+            padding: 6px; display: none; flex-direction: column; width: 160px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 3000; border: 1px solid rgba(0,0,0,0.05);
+        }
+        .cat-list-dropdown.open { display: flex; }
+        .cat-opt { padding: 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border-radius: 8px; }
+
+        .item-input { flex: 1; border: none; background: transparent; font-size: 1rem; outline: none; min-width: 0; }
+        .add-btn { background: var(--text); color: white; border: none; width: 44px; height: 44px; border-radius: 12px; font-size: 1.5rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+
+        .filters { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 24px; position: relative; z-index: 1; scroll-behavior: smooth; }
+        .filters::-webkit-scrollbar { display: none; }
+        .filter-btn { background: var(--card); border: 1px solid rgba(0,0,0,0.05); padding: 8px 18px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; cursor: pointer; opacity: 0.6; }
+        .filter-btn.active { background: var(--text); color: white; opacity: 1; }
+
+        .item-row { 
+            display: flex; align-items: center; background: var(--card); 
+            padding: 18px; border-radius: var(--radius); margin-bottom: 12px; 
+            border: 1px solid rgba(255,255,255,0.5); backdrop-filter: blur(10px);
+        }
+        
+        /* DRAG HANDLE STYLES */
+        .drag-handle {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            margin-right: 8px;
+            color: rgba(0,0,0,0.2);
+            font-size: 1.2rem;
+            user-select: none;
+            visibility: hidden; /* Only visible in 'All' view */
+        }
+        .draggable .drag-handle { visibility: visible; }
+        .drag-handle:active { cursor: grabbing; }
+
+        .sortable-ghost { opacity: 0.1; }
+        .sortable-chosen { background: #FFF !important; }
+        
+        .item-num { font-size: 0.75rem; font-weight: 900; color: rgba(0,0,0,0.1); margin-right: 15px; user-select: none; min-width: 20px; }
+        .item-content { flex: 1; min-width: 0; pointer-events: none; }
+        .item-cat { font-size: 0.55rem; text-transform: uppercase; color: var(--accent); font-weight: 800; display: block; margin-bottom: 2px; }
+        .item-name { font-weight: 600; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .delete-btn { background: none; border: none; color: #DDD; cursor: pointer; font-size: 1.1rem; padding: 10px; margin-left: 5px; position: relative; z-index: 10; }
+
+        @media print {
+            .menu-container, .input-card, .filters, .delete-btn, .drag-handle { display: none !important; }
+            body { background: white !important; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-top">
+        <h1>Presence</h1>
+        <span class="count-display" id="countNum">0 / 99</span>
+    </div>
+
+    <div class="menu-container">
+        <div class="menu-dots" onclick="toggleMainMenu(event)">⋮</div>
+        <div class="menu-dropdown" id="mainMenu">
+            <button class="menu-item" onclick="window.print()">Print List</button>
+            <button class="menu-item" onclick="exportData()">Export Data</button>
+            <button class="menu-item" onclick="document.getElementById('fileInput').click()">Import Data</button>
+            <hr style="border:0; border-top: 1px solid rgba(0,0,0,0.05); margin: 5px 0;">
+            <button class="menu-item" onclick="document.getElementById('bgInput').click()">Set Background</button>
+            <button class="menu-item" onclick="resetStyle()" style="color:#ff4757">Reset Styles</button>
+        </div>
+    </div>
+
+    <h2>99 Things</h2>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+</header>
+
+<div class="content">
+    <input type="file" id="bgInput" accept="image/*" style="display:none">
+    <input type="file" id="fileInput" accept=".json" style="display:none">
+
+    <div class="input-card">
+        <div class="input-row">
+            <div class="cat-selector-wrap">
+                <div id="currentSelectedCat" class="selected-cat-btn" onclick="toggleCatMenu(event)">Clothing</div>
+                <div id="catListDropdown" class="cat-list-dropdown"></div>
+            </div>
+            <input id="itemInput" class="item-input" placeholder="Add item..." autocomplete="off">
+            <button id="addBtn" class="add-btn">+</button>
+        </div>
+    </div>
+
+    <div class="filters" id="filters">
+        <button class="filter-btn active" data-cat="all">All</button>
+        <button class="filter-btn" data-cat="clothing">Clothing</button>
+        <button class="filter-btn" data-cat="accessories">Accessories</button>
+        <button class="filter-btn" data-cat="shoes">Shoes</button>
+        <button class="filter-btn" data-cat="technology">Tech</button>
+        <button class="filter-btn" data-cat="books">Books</button>
+        <button class="filter-btn" data-cat="documents">Docs</button>
+        <button class="filter-btn" data-cat="household">Home</button>
+        <button class="filter-btn" data-cat="personal">Personal</button>
+        <button class="filter-btn" data-cat="art">Art</button>
+        <button class="filter-btn" data-cat="other">Other</button>
+    </div>
+
+    <div id="listSection"></div>
+</div>
+
+<script>
+    const STORAGE_KEY = 'presence_99_final';
+    const STYLE_KEY = 'presence_bg_final';
+    const categories = ['Clothing', 'Accessories', 'Shoes', 'Technology', 'Books', 'Documents', 'Household', 'Personal', 'Art', 'Other'];
+    let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let currentFilter = 'all';
+    let sortableInstance = null;
+
+    const catDrop = document.getElementById('catListDropdown');
+    categories.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = 'cat-opt';
+        div.textContent = cat;
+        div.onclick = (e) => { 
+            e.stopPropagation(); 
+            syncUI(cat); 
+            catDrop.classList.remove('open'); 
+        };
+        catDrop.appendChild(div);
+    });
+
+    function toggleMainMenu(e) { e.stopPropagation(); document.getElementById('mainMenu').classList.toggle('open'); catDrop.classList.remove('open'); }
+    function toggleCatMenu(e) { e.stopPropagation(); catDrop.classList.toggle('open'); document.getElementById('mainMenu').classList.remove('open'); }
+    document.addEventListener('click', () => { document.getElementById('mainMenu').classList.remove('open'); catDrop.classList.remove('open'); });
+
+    function syncUI(catName) {
+        const norm = catName.toLowerCase();
+        document.getElementById('currentSelectedCat').textContent = catName;
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            const active = btn.dataset.cat === norm;
+            btn.classList.toggle('active', active);
+            if (active) {
+                const scrollPos = btn.offsetLeft - (document.getElementById('filters').offsetWidth / 2) + (btn.offsetWidth / 2);
+                document.getElementById('filters').scrollTo({ left: scrollPos, behavior: 'smooth' });
+            }
+        });
+        currentFilter = norm;
+        render();
+    }
+
+    function initSortable() {
+        const section = document.getElementById('listSection');
+        if (sortableInstance) {
+            sortableInstance.destroy();
+            sortableInstance = null;
+        }
+        
+        if (currentFilter === 'all') {
+            sortableInstance = new Sortable(section, {
+                animation: 200,
+                handle: '.drag-handle', // ONLY DRAG VIA HANDLE
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                forceFallback: true,
+                fallbackTolerance: 3,
+                onEnd: () => {
+                    const newOrder = [];
+                    const rows = section.querySelectorAll('.item-row');
+                    rows.forEach(row => {
+                        const id = parseInt(row.dataset.id);
+                        const match = items.find(i => i.id === id);
+                        if (match) newOrder.push(match);
+                    });
+                    items = newOrder;
+                    render();
+                }
+            });
+        }
+    }
+
+    function render() {
+        const section = document.getElementById('listSection');
+        section.innerHTML = '';
+        const filtered = currentFilter === 'all' ? items : items.filter(i => i.cat.toLowerCase() === currentFilter);
+
+        filtered.forEach((item) => {
+            const div = document.createElement('div');
+            div.className = `item-row ${currentFilter === 'all' ? 'draggable' : ''}`;
+            div.dataset.id = item.id;
+            div.innerHTML = `
+                <div class="drag-handle">⠿</div>
+                <span class="item-num">${String(items.indexOf(item) + 1).padStart(2, '0')}</span>
+                <div class="item-content"><span class="item-cat">${item.cat}</span><span class="item-name">${item.name}</span></div>
+                <button class="delete-btn" onclick="deleteItem(event, ${item.id})">✕</button>
+            `;
+            section.appendChild(div);
+        });
+
+        document.getElementById('countNum').textContent = `${items.length} / 99`;
+        document.getElementById('progressFill').style.width = (items.length / 99 * 100) + '%';
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        initSortable();
+    }
+
+    function addItem() {
+        const input = document.getElementById('itemInput');
+        if (!input.value.trim() || items.length >= 99) return;
+        items.push({ id: Date.now(), name: input.value.trim(), cat: document.getElementById('currentSelectedCat').textContent });
+        input.value = '';
+        render();
+    }
+
+    function deleteItem(e, id) {
+        e.stopPropagation();
+        items = items.filter(i => i.id !== id);
+        render();
+    }
+
+    document.getElementById('addBtn').onclick = addItem;
+    document.getElementById('itemInput').onkeypress = (e) => e.key === 'Enter' && addItem();
+    
+    document.getElementById('filters').onclick = (e) => {
+        const cat = e.target.dataset.cat;
+        if (cat) {
+            if (cat === 'all') {
+                currentFilter = 'all';
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === 'all'));
+                render();
+            } else {
+                syncUI(categories.find(c => c.toLowerCase() === cat));
+            }
+        }
+    };
+
+    document.getElementById('bgInput').onchange = (e) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => { document.body.style.backgroundImage = `url(${ev.target.result})`; localStorage.setItem(STYLE_KEY, ev.target.result); };
+        reader.readAsDataURL(e.target.files[0]);
+    };
+
+    function resetStyle() { localStorage.removeItem(STYLE_KEY); location.reload(); }
+    function exportData() {
+        const blob = new Blob([JSON.stringify(items)], {type: 'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '99_things.json'; a.click();
+    }
+    document.getElementById('fileInput').onchange = (e) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => { items = JSON.parse(ev.target.result); render(); };
+        reader.readAsText(e.target.files[0]);
+    };
+
+    const savedBg = localStorage.getItem(STYLE_KEY);
+    if (savedBg) document.body.style.backgroundImage = `url(${savedBg})`;
+    render();
+</script>
+</body>
+</html>
